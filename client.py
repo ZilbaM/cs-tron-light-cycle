@@ -44,20 +44,18 @@ class Game:
 
     def getSelfWalls(self) -> [pygame.Rect]:
         walls  = self.player.walls.copy()
+        if self.player.currentWall:
+            walls.append(self.player.currentWall)
         return walls
 
     def drawOpponents(self):
-        print('opponents : ', self.opponents)
         for opponent in self.opponents or []:
-            print('drawing opponent at : ', opponent.pos)
             opponent.drawUser()
-            print('drawing opponent walls : ', opponent.walls)
             opponent.drawWalls()
 
     def gameLoop(self):
         running = True
         while running:
-            print('tick')
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False

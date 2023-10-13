@@ -25,36 +25,38 @@ class Game:
         network.sendMessage(playerInfoMessage, playerSocket)
         self.player_info_loop(player, playerSocket)
 
+    def getPlayerIndex(self, playerInfo = PlayerInfo) -> int:
+        for index, player in enumerate(self.players):
+            if player.playerPos.x == playerInfo.playerPos.x and player.playerPos.y == playerInfo.playerPos.y:
+                return index
+
     def player_info_loop(self, playerInfo: PlayerInfo, playerSocket : socket.socket):
         playerIndex: int
-        for index, player in enumerate(self.players):
-                if player.playerPos.x == playerInfo.playerPos.x and player.playerPos.y == playerInfo.playerPos.y:
-                    playerIndex = index
         while True:
             data = network.receiveMessage(playerSocket)
             if not data:
                 print("Disconnected")
                 break
             decoded = network.decodeClientInfo(data)
-            print('player position', decoded.playerPos)
-            print('game walls : ', self.getWalls())
-            collided = pygame.Rect(decoded.playerPos.x, decoded.playerPos.y, 10, 10).collidelist(self.getWalls())
+            collided = pygame.Rect(decoded.playerPos.x, decoded.playerPos.y, 10, 10).collidelist(self.getWalls(self.getPlayerIndex(playerInfo)))
             lock.acquire()
             if collided != -1:
-                print('gameover for player ', playerIndex)
                 reply = 'gameover'
-                self.players = self.players[:playerIndex] + self.players[playerIndex+1:]
+                self.players = self.players[:self.getPlayerIndex(playerInfo)] + self.players[self.getPlayerIndex(playerInfo)+1:]
             else :
-                self.players[playerIndex] = decoded
-                reply = network.encodeGameInfo(self.players[:playerIndex] + self.players[playerIndex+1:])
+                self.players[self.getPlayerIndex(playerInfo)] = decoded
+                playerInfo = decoded
+                reply = network.encodeGameInfo(self.players[:self.getPlayerIndex(playerInfo)] + self.players[(self.getPlayerIndex(playerInfo)+1):])
             lock.release()
             network.sendMessage(reply, playerSocket)
         playerSocket.close()
 
-    def getWalls(self) -> [pygame.Rect]:
+    def getWalls(self, playerIndex: int = None) -> [pygame.Rect]:
         walls = []
-        for player in self.players:
+        for index, player in enumerate(self.players):
             walls += player.playerWalls
+            if playerIndex != None and playerIndex==index:
+                walls = walls[:-1]
         return walls
 
     def getSpawnPos(self):
