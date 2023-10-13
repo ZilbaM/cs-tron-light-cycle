@@ -16,7 +16,7 @@ movement_threshold = 1.0 / 10.0 # 10 move a second
 
 class Game:
     def __init__(self, network : Network) -> None:
-        self.opponents: [User]
+        self.opponents: [User] = []
         self.player: Player
         self.network = network
         self.opponentsColor = self.randomColor()
@@ -35,15 +35,23 @@ class Game:
         return pygame.Color(randint(100, 255), randint(100, 255), randint(100, 255))
     
     def updateOpponents(self, opponentsInfos: [PlayerInfo]):
-        self.opponents = [User(opponent.playerPos.x, opponent.playerPos.y, self.opponentsColor) for opponent in opponentsInfos]
+        opponents = []
+        for opponent in opponentsInfos:
+            opponentUser = User(opponent.playerPos.x, opponent.playerPos.y, self.opponentsColor)
+            opponentUser.walls = opponent.playerWalls
+            opponents.append(opponentUser)
+        self.opponents = opponents
 
     def getSelfWalls(self) -> [pygame.Rect]:
         walls  = self.player.walls.copy()
         return walls
 
     def drawOpponents(self):
-        for opponent in self.opponents:
+        print('opponents : ', self.opponents)
+        for opponent in self.opponents or []:
+            print('drawing opponent at : ', opponent.pos)
             opponent.drawUser()
+            print('drawing opponent walls : ', opponent.walls)
             opponent.drawWalls()
 
     def gameLoop(self):
@@ -65,21 +73,17 @@ class Game:
                 self.player.changeDir(pygame.Vector2(player_speed, 0))
             self.player.move(self.dt)
             encoded = self.network.encodeClientInfo(PlayerInfo(self.player.pos, self.getSelfWalls()))
-            print('send current position : ', self.player.pos, self.getSelfWalls())
             self.network.sendMessage(encoded, self.network.socket)
             received = self.network.receiveMessage(self.network.socket)
-            print('received game message : ', received)
             if received == 'gameover':
                 running = False
             else :
                 otherPlayersInfo = self.network.decodeGameInfo(received)
-                print('received game message : ', otherPlayersInfo)
                 self.updateOpponents(otherPlayersInfo)
                 self.drawOpponents()
                 pygame.display.flip()
                 self.dt = clock.tick(framerate) / 1000
                 
-            
         self.network.close()
         pygame.quit()
 
@@ -87,14 +91,14 @@ class User:
     def __init__(self, x: int, y: int, color: pygame.Color):
         self.pos = pygame.Vector2(x, y)
         self.color = color
-        self.walls = []
+        self.walls: pygame.Rect = []
         self.rect = pygame.Rect(self.pos.x, self.pos.y, player_size, player_size)
     
     def drawUser(self):
         pygame.draw.rect(screen, self.color, self.rect, 0)
 
     def drawWalls(self):
-        for wall in self.walls or []:
+        for wall in self.walls:
             pygame.draw.rect(screen, self.color, wall, 0)
         if hasattr(self, "currentWall") and self.currentWall:
             pygame.draw.rect(screen, self.color, self.currentWall, 0)
@@ -130,10 +134,6 @@ class Player(User):
     def newWall(self):
         self.walls.append(self.currentWall.copy())
         self.currentWall = pygame.Rect(self.pos.x, self.pos.y, player_size, player_size)
-
-    def collide(self) -> bool :
-        return self.rect.collidelist(self.walls) != -1
-        
     
     def updateWall(self, playerCopy: pygame.Rect):
         if self.currentWall:

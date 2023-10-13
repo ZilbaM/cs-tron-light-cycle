@@ -28,9 +28,8 @@ class Game:
     def player_info_loop(self, playerInfo: PlayerInfo, playerSocket : socket.socket):
         playerIndex: int
         for index, player in enumerate(self.players):
-            if player.playerPos.x == playerInfo.playerPos.x and player.playerPos.y == playerInfo.playerPos.y:
-                playerIndex = index
-        print('player index : ', playerIndex)
+                if player.playerPos.x == playerInfo.playerPos.x and player.playerPos.y == playerInfo.playerPos.y:
+                    playerIndex = index
         while True:
             data = network.receiveMessage(playerSocket)
             if not data:
@@ -46,17 +45,10 @@ class Game:
                 reply = 'gameover'
                 self.players = self.players[:playerIndex] + self.players[playerIndex+1:]
             else :
-                print('before changes')
-                for player in self.players:
-                    print(player.playerPos)
                 self.players[playerIndex] = decoded
-                print('after changes')
-                for player in self.players:
-                    print(player.playerPos)
                 reply = network.encodeGameInfo(self.players[:playerIndex] + self.players[playerIndex+1:])
             lock.release()
             network.sendMessage(reply, playerSocket)
-        print("Lost connection")
         playerSocket.close()
 
     def getWalls(self) -> [pygame.Rect]:
@@ -66,7 +58,6 @@ class Game:
         return walls
 
     def getSpawnPos(self):
-
         walls = self.getWalls()
         while True:
             randomPosX = random.randrange(start=1, stop=127, step=1) * 10
